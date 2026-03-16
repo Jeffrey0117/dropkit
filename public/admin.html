@@ -5,134 +5,203 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin | DropKit</title>
   <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Noto Sans TC', -apple-system, sans-serif;
-      background: #08081a;
-      color: #e0e0e0;
+      font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+      background: #f5f5f0;
+      color: #222;
       min-height: 100vh;
     }
+
+    /* Login */
     .login-overlay {
       position: fixed; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      background: #08081a; z-index: 100;
+      background: #f5f5f0; z-index: 100;
     }
     .login-box {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px; padding: 40px;
-      text-align: center; max-width: 360px; width: 90%;
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 12px;
+      padding: 36px;
+      text-align: center;
+      max-width: 340px; width: 90%;
     }
-    .login-box h2 { margin-bottom: 20px; color: #b388ff; font-size: 20px; }
+    .login-box h2 {
+      font-size: 20px; font-weight: 900;
+      margin-bottom: 20px; letter-spacing: -1px;
+    }
     .login-box input {
-      width: 100%; padding: 12px 16px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
-      color: #fff; font-size: 16px; margin-bottom: 12px; outline: none;
+      width: 100%; padding: 12px 14px;
+      border: 2px solid #eee; border-radius: 8px;
+      background: #fff; color: #222;
+      font-size: 14px; font-family: inherit;
+      margin-bottom: 12px; outline: none;
     }
-    .login-box input:focus { border-color: #b388ff; }
+    .login-box input:focus { border-color: #000; }
     .login-box button {
-      width: 100%; padding: 12px; border-radius: 10px; border: none;
-      background: linear-gradient(135deg, #7c4dff, #b388ff);
-      color: #fff; font-size: 16px; cursor: pointer; font-weight: 600;
+      width: 100%; padding: 12px;
+      border: 3px solid #000; border-radius: 8px;
+      background: #000; color: #fff;
+      font-size: 12px; font-weight: 800;
+      font-family: inherit; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 1px;
+      transition: all 0.15s;
     }
-    .login-box button:hover { opacity: 0.9; }
-    .login-error { color: #ff6b6b; font-size: 13px; margin-top: 8px; }
+    .login-box button:hover { background: #333; border-color: #333; }
+    .login-error { color: #e74c3c; font-size: 12px; font-weight: 700; margin-top: 8px; }
     .hidden { display: none !important; }
 
+    /* Dashboard */
     .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
     header {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 24px; padding-bottom: 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 2px solid #eee;
       flex-wrap: wrap; gap: 8px;
     }
-    header h1 { font-size: 22px; color: #b388ff; }
-    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-outline {
-      padding: 6px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
-      background: transparent; color: #aaa; cursor: pointer; font-size: 13px;
-      text-decoration: none; display: inline-flex; align-items: center;
-    }
-    .btn-outline:hover { border-color: #b388ff; color: #b388ff; }
-    .btn-danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
-    .btn-mail { border-color: rgba(124,77,255,0.3); color: #b388ff; }
-    .btn-mail:hover { border-color: #7c4dff; background: rgba(124,77,255,0.1); }
+    header h1 { font-size: 20px; font-weight: 900; letter-spacing: -1px; }
 
+    .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .btn {
+      padding: 6px 14px; border-radius: 6px;
+      border: 2px solid #ddd; background: #fff;
+      color: #222; font-size: 11px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      text-decoration: none; display: inline-flex; align-items: center;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+    .btn:hover { border-color: #000; color: #000; }
+    .btn-primary { background: #000; color: #fff; border-color: #000; }
+    .btn-primary:hover { background: #333; border-color: #333; }
+    .btn-danger:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* Stats */
     .stats-row {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px; margin-bottom: 28px;
+      gap: 12px; margin-bottom: 24px;
     }
     .stat-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 12px; padding: 20px; text-align: center;
+      background: #fff;
+      border: 2px solid #eee;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.15s;
     }
-    .stat-card .num { font-size: 32px; font-weight: 700; color: #b388ff; }
-    .stat-card .label { font-size: 13px; color: #888; margin-top: 4px; }
+    .stat-card:hover { border-color: #000; }
+    .stat-card .num { font-size: 32px; font-weight: 900; color: #000; }
+    .stat-card .label {
+      font-size: 11px; font-weight: 700;
+      color: #999; margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
 
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    /* Table */
+    .table-wrap {
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th {
-      text-align: left; padding: 10px 12px; color: #888; font-weight: 500;
-      border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap;
+      text-align: left; padding: 12px 14px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: #999; background: #fafaf5;
+      border-bottom: 2px solid #eee; white-space: nowrap;
     }
     td {
-      padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
-      vertical-align: top; max-width: 250px; word-break: break-word;
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+      max-width: 220px; word-break: break-word;
     }
-    tr:hover td { background: rgba(255,255,255,0.02); }
-    tr.selected td { background: rgba(124,77,255,0.08); }
-    a.file-link { color: #7c4dff; text-decoration: none; }
+    tr:hover td { background: #fafaf5; }
+    tr.selected td { background: #f0f0ea; }
+    a.file-link { color: #000; font-weight: 700; text-decoration: none; }
     a.file-link:hover { text-decoration: underline; }
-    .time { color: #777; font-size: 12px; white-space: nowrap; }
-    .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+    .time { color: #bbb; font-size: 11px; white-space: nowrap; }
+    .empty-state { text-align: center; padding: 48px 20px; color: #999; font-weight: 600; }
 
-    /* Checkbox column */
+    /* Checkbox */
     .cb-col { width: 36px; text-align: center; }
-    input[type="checkbox"] { accent-color: #b388ff; width: 16px; height: 16px; cursor: pointer; }
+    input[type="checkbox"] {
+      accent-color: #000; width: 15px; height: 15px; cursor: pointer;
+    }
 
-    /* Email modal */
+    /* Modal */
     .modal-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center;
       z-index: 200;
     }
     .modal {
-      background: #12122a;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px; padding: 28px;
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 12px;
+      padding: 28px;
       max-width: 560px; width: 90%;
     }
-    .modal h3 { color: #b388ff; font-size: 18px; margin-bottom: 16px; }
-    .modal .field { margin-bottom: 14px; }
-    .modal label { display: block; font-size: 13px; color: #888; margin-bottom: 4px; }
-    .modal input, .modal textarea {
-      width: 100%; padding: 10px 14px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
-      color: #fff; font-size: 14px; outline: none; font-family: inherit;
+    .modal h3 {
+      font-size: 18px; font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
     }
-    .modal input:focus, .modal textarea:focus { border-color: #b388ff; }
+    .modal .field { margin-bottom: 14px; }
+    .modal label {
+      display: block; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: #999; margin-bottom: 4px;
+    }
+    .modal input, .modal textarea {
+      width: 100%; padding: 10px 14px; border-radius: 8px;
+      border: 2px solid #eee; background: #fff;
+      color: #222; font-size: 13px; outline: none;
+      font-family: inherit;
+    }
+    .modal input:focus, .modal textarea:focus { border-color: #000; }
     .modal textarea { min-height: 120px; resize: vertical; }
-    .modal .recipients { font-size: 13px; color: #888; margin-bottom: 12px; }
-    .modal .recipients strong { color: #b388ff; }
+    .modal .recipients {
+      font-size: 12px; color: #999; font-weight: 600;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      background: #fafaf5;
+      border-radius: 8px;
+      border: 2px solid #eee;
+    }
+    .modal .recipients strong { color: #000; }
     .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
     .btn-send {
-      padding: 10px 24px; border-radius: 10px; border: none;
-      background: linear-gradient(135deg, #7c4dff, #b388ff);
-      color: #fff; font-size: 14px; cursor: pointer; font-weight: 600;
+      padding: 10px 24px; border-radius: 8px;
+      border: 3px solid #000; background: #000;
+      color: #fff; font-size: 12px; font-weight: 800;
+      font-family: inherit; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 1px;
+      transition: all 0.15s;
     }
-    .btn-send:hover { opacity: 0.9; }
-    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-send:hover { background: #333; border-color: #333; }
+    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-cancel {
-      padding: 10px 24px; border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: transparent; color: #aaa; cursor: pointer; font-size: 14px;
+      padding: 10px 24px; border-radius: 8px;
+      border: 2px solid #ddd; background: #fff;
+      color: #222; font-size: 12px; font-weight: 700;
+      font-family: inherit; cursor: pointer;
+      transition: all 0.15s;
     }
-    .send-result { font-size: 13px; margin-top: 8px; }
-    .send-result.success { color: #66bb6a; }
-    .send-result.error { color: #ff6b6b; }
+    .btn-cancel:hover { border-color: #000; }
+    .send-result { font-size: 12px; font-weight: 700; margin-top: 8px; }
+    .send-result.success { color: #2ecc71; }
+    .send-result.error { color: #e74c3c; }
   </style>
 </head>
 <body>
@@ -141,7 +210,7 @@
   <div class="login-box">
     <h2>DropKit Admin</h2>
     <input type="password" id="passwordInput" placeholder="Password" autofocus>
-    <button onclick="doLogin()">Login</button>
+    <button onclick="doLogin()">Enter</button>
     <div class="login-error hidden" id="loginError">Incorrect password</div>
   </div>
 </div>
@@ -150,21 +219,23 @@
   <header>
     <h1>DropKit Admin</h1>
     <div class="header-actions">
-      <button class="btn-outline btn-mail" onclick="openEmailModal('selected')">Email Selected</button>
-      <button class="btn-outline btn-mail" onclick="openEmailModal('all')">Email All</button>
-      <button class="btn-outline btn-mail" onclick="openEmailModal('custom')">Email Custom</button>
-      <a class="btn-outline" id="exportBtn" href="#">Export CSV</a>
-      <button class="btn-outline btn-danger" onclick="doLogout()">Logout</button>
+      <button class="btn" onclick="openEmailModal('selected')">Email Selected</button>
+      <button class="btn" onclick="openEmailModal('all')">Email All</button>
+      <button class="btn btn-primary" onclick="openEmailModal('custom')">Email Custom</button>
+      <a class="btn" id="exportBtn" href="#">Export CSV</a>
+      <button class="btn btn-danger" onclick="doLogout()">Logout</button>
     </div>
   </header>
 
   <div class="stats-row" id="statsRow"></div>
 
   <div class="table-wrap">
-    <table>
-      <thead id="tableHead"></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+    <div class="table-scroll">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -174,7 +245,7 @@
     <h3>Send Email</h3>
     <div class="recipients" id="emailRecipients"></div>
     <div class="field hidden" id="customEmailField">
-      <label>Recipients (one email per line, or comma-separated)</label>
+      <label>Recipients</label>
       <textarea id="customEmailInput" placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com" style="min-height:80px"></textarea>
     </div>
     <div class="field">
@@ -182,8 +253,8 @@
       <input type="text" id="emailSubject" placeholder="Email subject">
     </div>
     <div class="field">
-      <label>Message (HTML supported)</label>
-      <textarea id="emailBody" placeholder="Write your message..."></textarea>
+      <label>Message</label>
+      <textarea id="emailBody" placeholder="Write your message... (HTML supported)"></textarea>
     </div>
     <div class="send-result hidden" id="sendResult"></div>
     <div class="modal-actions">
@@ -289,7 +360,7 @@
 
   function renderStats(s) {
     $('statsRow').innerHTML = `
-      <div class="stat-card"><div class="num">${s.total}</div><div class="label">Total Submissions</div></div>
+      <div class="stat-card"><div class="num">${s.total}</div><div class="label">Total</div></div>
       <div class="stat-card"><div class="num">${s.today}</div><div class="label">Today</div></div>
     `
   }
@@ -381,7 +452,7 @@
     $('emailBody').value = ''
     $('sendResult').classList.add('hidden')
     $('sendBtn').disabled = false
-    $('sendBtn').textContent = 'Send'
+    $('sendBtn').textContent = 'SEND'
     $('emailModal').classList.remove('hidden')
   }
 
@@ -405,7 +476,6 @@
       return
     }
 
-    // Build payload based on mode
     const payload = { subject }
 
     if (emailMode === 'custom') {
@@ -419,11 +489,10 @@
       payload.ids = emailMode === 'selected' ? [...selectedIds] : []
     }
 
-    // Convert plain text newlines to <br> if no HTML tags detected
     payload.html = body.includes('<') ? body : body.replace(/\n/g, '<br>')
 
     $('sendBtn').disabled = true
-    $('sendBtn').textContent = 'Sending...'
+    $('sendBtn').textContent = 'SENDING...'
 
     try {
       const result = await apiPost('/api/admin/send-email', payload)
@@ -441,7 +510,7 @@
     }
 
     $('sendBtn').disabled = false
-    $('sendBtn').textContent = 'Send'
+    $('sendBtn').textContent = 'SEND'
   }
 
   function showSendResult(msg, isError) {
