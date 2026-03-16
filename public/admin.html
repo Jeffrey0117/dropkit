@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin | DropKit</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans TC', -apple-system, sans-serif;
+      background: #08081a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+    .login-overlay {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #08081a; z-index: 100;
+    }
+    .login-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 40px;
+      text-align: center; max-width: 360px; width: 90%;
+    }
+    .login-box h2 { margin-bottom: 20px; color: #b388ff; font-size: 20px; }
+    .login-box input {
+      width: 100%; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+      color: #fff; font-size: 16px; margin-bottom: 12px; outline: none;
+    }
+    .login-box input:focus { border-color: #b388ff; }
+    .login-box button {
+      width: 100%; padding: 12px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #7c4dff, #b388ff);
+      color: #fff; font-size: 16px; cursor: pointer; font-weight: 600;
+    }
+    .login-box button:hover { opacity: 0.9; }
+    .login-error { color: #ff6b6b; font-size: 13px; margin-top: 8px; }
+    .hidden { display: none !important; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-wrap: wrap; gap: 8px;
+    }
+    header h1 { font-size: 22px; color: #b388ff; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-outline {
+      padding: 6px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: #aaa; cursor: pointer; font-size: 13px;
+      text-decoration: none; display: inline-flex; align-items: center;
+    }
+    .btn-outline:hover { border-color: #b388ff; color: #b388ff; }
+    .btn-danger:hover { border-color: #ff6b6b; color: #ff6b6b; }
+    .btn-mail { border-color: rgba(124,77,255,0.3); color: #b388ff; }
+    .btn-mail:hover { border-color: #7c4dff; background: rgba(124,77,255,0.1); }
+
+    .stats-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px; padding: 20px; text-align: center;
+    }
+    .stat-card .num { font-size: 32px; font-weight: 700; color: #b388ff; }
+    .stat-card .label { font-size: 13px; color: #888; margin-top: 4px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th {
+      text-align: left; padding: 10px 12px; color: #888; font-weight: 500;
+      border-bottom: 1px solid rgba(255,255,255,0.08); white-space: nowrap;
+    }
+    td {
+      padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top; max-width: 250px; word-break: break-word;
+    }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    tr.selected td { background: rgba(124,77,255,0.08); }
+    a.file-link { color: #7c4dff; text-decoration: none; }
+    a.file-link:hover { text-decoration: underline; }
+    .time { color: #777; font-size: 12px; white-space: nowrap; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #666; }
+
+    /* Checkbox column */
+    .cb-col { width: 36px; text-align: center; }
+    input[type="checkbox"] { accent-color: #b388ff; width: 16px; height: 16px; cursor: pointer; }
+
+    /* Email modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+    .modal {
+      background: #12122a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 28px;
+      max-width: 560px; width: 90%;
+    }
+    .modal h3 { color: #b388ff; font-size: 18px; margin-bottom: 16px; }
+    .modal .field { margin-bottom: 14px; }
+    .modal label { display: block; font-size: 13px; color: #888; margin-bottom: 4px; }
+    .modal input, .modal textarea {
+      width: 100%; padding: 10px 14px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06);
+      color: #fff; font-size: 14px; outline: none; font-family: inherit;
+    }
+    .modal input:focus, .modal textarea:focus { border-color: #b388ff; }
+    .modal textarea { min-height: 120px; resize: vertical; }
+    .modal .recipients { font-size: 13px; color: #888; margin-bottom: 12px; }
+    .modal .recipients strong { color: #b388ff; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .btn-send {
+      padding: 10px 24px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #7c4dff, #b388ff);
+      color: #fff; font-size: 14px; cursor: pointer; font-weight: 600;
+    }
+    .btn-send:hover { opacity: 0.9; }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-cancel {
+      padding: 10px 24px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: #aaa; cursor: pointer; font-size: 14px;
+    }
+    .send-result { font-size: 13px; margin-top: 8px; }
+    .send-result.success { color: #66bb6a; }
+    .send-result.error { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>DropKit Admin</h2>
+    <input type="password" id="passwordInput" placeholder="Password" autofocus>
+    <button onclick="doLogin()">Login</button>
+    <div class="login-error hidden" id="loginError">Incorrect password</div>
+  </div>
+</div>
+
+<div class="container hidden" id="dashboard">
+  <header>
+    <h1>DropKit Admin</h1>
+    <div class="header-actions">
+      <button class="btn-outline btn-mail" onclick="openEmailModal('selected')">Email Selected</button>
+      <button class="btn-outline btn-mail" onclick="openEmailModal('all')">Email All</button>
+      <a class="btn-outline" id="exportBtn" href="#">Export CSV</a>
+      <button class="btn-outline btn-danger" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal-overlay hidden" id="emailModal">
+  <div class="modal">
+    <h3>Send Email</h3>
+    <div class="recipients" id="emailRecipients"></div>
+    <div class="field">
+      <label>Subject</label>
+      <input type="text" id="emailSubject" placeholder="Email subject">
+    </div>
+    <div class="field">
+      <label>Message (HTML supported)</label>
+      <textarea id="emailBody" placeholder="Write your message..."></textarea>
+    </div>
+    <div class="send-result hidden" id="sendResult"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn-send" id="sendBtn" onclick="sendEmail()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let password = sessionStorage.getItem('dk_admin_pw') || ''
+  let fields = []
+  let allSubmissions = []
+  let selectedIds = new Set()
+  let emailMode = 'all'
+
+  const $ = id => document.getElementById(id)
+
+  if (password) tryAuth()
+
+  $('passwordInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin()
+  })
+
+  function doLogin() {
+    password = $('passwordInput').value
+    tryAuth()
+  }
+
+  async function tryAuth() {
+    try {
+      const res = await fetch('/api/admin/stats?pw=' + encodeURIComponent(password), {
+        headers: { 'x-admin-password': password }
+      })
+      if (!res.ok) {
+        $('loginError').classList.remove('hidden')
+        sessionStorage.removeItem('dk_admin_pw')
+        return
+      }
+      sessionStorage.setItem('dk_admin_pw', password)
+      $('loginOverlay').classList.add('hidden')
+      $('dashboard').classList.remove('hidden')
+      $('exportBtn').href = '/api/admin/export?pw=' + encodeURIComponent(password)
+      loadAll()
+    } catch {
+      $('loginError').classList.remove('hidden')
+    }
+  }
+
+  function doLogout() {
+    sessionStorage.removeItem('dk_admin_pw')
+    password = ''
+    $('loginOverlay').classList.remove('hidden')
+    $('dashboard').classList.add('hidden')
+    $('passwordInput').value = ''
+    $('loginError').classList.add('hidden')
+  }
+
+  function apiPost(p, body) {
+    const sep = p.includes('?') ? '&' : '?'
+    return fetch(p + sep + 'pw=' + encodeURIComponent(password), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+      body: JSON.stringify(body),
+    }).then(r => r.json())
+  }
+
+  function api(p) {
+    const sep = p.includes('?') ? '&' : '?'
+    return fetch(p + sep + 'pw=' + encodeURIComponent(password), {
+      headers: { 'x-admin-password': password }
+    }).then(r => r.json())
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  function esc(str) {
+    if (!str) return ''
+    const d = document.createElement('div')
+    d.textContent = str
+    return d.innerHTML
+  }
+
+  function isUrl(str) {
+    return typeof str === 'string' && (str.startsWith('http://') || str.startsWith('https://'))
+  }
+
+  async function loadAll() {
+    const [stats, data] = await Promise.all([
+      api('/api/admin/stats'),
+      api('/api/admin/submissions'),
+    ])
+    fields = data.fields || []
+    allSubmissions = data.submissions || []
+    renderStats(stats)
+    renderTable(allSubmissions)
+  }
+
+  function renderStats(s) {
+    $('statsRow').innerHTML = `
+      <div class="stat-card"><div class="num">${s.total}</div><div class="label">Total Submissions</div></div>
+      <div class="stat-card"><div class="num">${s.today}</div><div class="label">Today</div></div>
+    `
+  }
+
+  function toggleAll(checked) {
+    selectedIds = checked ? new Set(allSubmissions.map(s => s.id)) : new Set()
+    document.querySelectorAll('.row-cb').forEach(cb => { cb.checked = checked })
+    updateRowHighlights()
+  }
+
+  function toggleRow(id, checked) {
+    if (checked) selectedIds.add(id)
+    else selectedIds.delete(id)
+    updateRowHighlights()
+  }
+
+  function updateRowHighlights() {
+    document.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.classList.toggle('selected', selectedIds.has(tr.dataset.id))
+    })
+  }
+
+  function renderTable(list) {
+    $('tableHead').innerHTML = '<tr>' +
+      '<th class="cb-col"><input type="checkbox" onchange="toggleAll(this.checked)"></th>' +
+      fields.map(f => `<th>${esc(f.label)}</th>`).join('') +
+      '<th>Time</th></tr>'
+
+    if (!list.length) {
+      $('tableBody').innerHTML = `<tr><td colspan="${fields.length + 2}" class="empty-state">No submissions yet</td></tr>`
+      return
+    }
+
+    $('tableBody').innerHTML = list.map(sub => {
+      const cells = fields.map(f => {
+        const val = sub.data[f.name]
+        if (isUrl(val)) {
+          return `<td><a class="file-link" href="${esc(val)}" target="_blank">${esc(f.label)}</a></td>`
+        }
+        return `<td>${esc(val || '-')}</td>`
+      }).join('')
+      return `<tr data-id="${esc(sub.id)}">
+        <td class="cb-col"><input type="checkbox" class="row-cb" onchange="toggleRow('${esc(sub.id)}', this.checked)"></td>
+        ${cells}
+        <td><span class="time">${fmtTime(sub.createdAt)}</span></td>
+      </tr>`
+    }).join('')
+  }
+
+  // ── Email ─────────────────────────────────────────
+
+  function getEmailField() {
+    return fields.find(f => f.type === 'email')
+  }
+
+  function openEmailModal(mode) {
+    emailMode = mode
+    const emailField = getEmailField()
+    if (!emailField) {
+      alert('No email field in form config')
+      return
+    }
+
+    let targets
+    if (mode === 'selected') {
+      if (selectedIds.size === 0) {
+        alert('Select at least one submission')
+        return
+      }
+      targets = allSubmissions.filter(s => selectedIds.has(s.id))
+    } else {
+      targets = allSubmissions
+    }
+
+    const emails = targets.map(s => s.data[emailField.name]).filter(Boolean)
+    $('emailRecipients').innerHTML = `Sending to <strong>${emails.length}</strong> recipient${emails.length === 1 ? '' : 's'}: ${emails.slice(0, 5).map(esc).join(', ')}${emails.length > 5 ? '...' : ''}`
+
+    $('emailSubject').value = ''
+    $('emailBody').value = ''
+    $('sendResult').classList.add('hidden')
+    $('sendBtn').disabled = false
+    $('sendBtn').textContent = 'Send'
+    $('emailModal').classList.remove('hidden')
+  }
+
+  function closeEmailModal() {
+    $('emailModal').classList.add('hidden')
+  }
+
+  async function sendEmail() {
+    const subject = $('emailSubject').value.trim()
+    const body = $('emailBody').value.trim()
+
+    if (!subject || !body) {
+      showSendResult('Please fill in subject and message', true)
+      return
+    }
+
+    $('sendBtn').disabled = true
+    $('sendBtn').textContent = 'Sending...'
+
+    const ids = emailMode === 'selected' ? [...selectedIds] : []
+
+    // Convert plain text newlines to <br> if no HTML tags detected
+    const html = body.includes('<') ? body : body.replace(/\n/g, '<br>')
+
+    try {
+      const result = await apiPost('/api/admin/send-email', { ids, subject, html })
+
+      if (result.success) {
+        showSendResult(`Sent: ${result.sent}, Failed: ${result.failed}`, false)
+        if (result.failed === 0) {
+          setTimeout(closeEmailModal, 1500)
+        }
+      } else {
+        showSendResult(result.error || 'Send failed', true)
+      }
+    } catch {
+      showSendResult('Network error', true)
+    }
+
+    $('sendBtn').disabled = false
+    $('sendBtn').textContent = 'Send'
+  }
+
+  function showSendResult(msg, isError) {
+    const el = $('sendResult')
+    el.textContent = msg
+    el.className = 'send-result ' + (isError ? 'error' : 'success')
+    el.classList.remove('hidden')
+  }
+
+  // Close modal on overlay click
+  $('emailModal').addEventListener('click', (e) => {
+    if (e.target === $('emailModal')) closeEmailModal()
+  })
+</script>
+</body>
+</html>
