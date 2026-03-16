@@ -152,6 +152,7 @@
     <div class="header-actions">
       <button class="btn-outline btn-mail" onclick="openEmailModal('selected')">Email Selected</button>
       <button class="btn-outline btn-mail" onclick="openEmailModal('all')">Email All</button>
+      <button class="btn-outline btn-mail" onclick="openEmailModal('custom')">Email Custom</button>
       <a class="btn-outline" id="exportBtn" href="#">Export CSV</a>
       <button class="btn-outline btn-danger" onclick="doLogout()">Logout</button>
     </div>
@@ -172,6 +173,10 @@
   <div class="modal">
     <h3>Send Email</h3>
     <div class="recipients" id="emailRecipients"></div>
+    <div class="field hidden" id="customEmailField">
+      <label>Recipients (one email per line, or comma-separated)</label>
+      <textarea id="customEmailInput" placeholder="user1@example.com&#10;user2@example.com&#10;user3@example.com" style="min-height:80px"></textarea>
+    </div>
     <div class="field">
       <label>Subject</label>
       <input type="text" id="emailSubject" placeholder="Email subject">
@@ -342,25 +347,35 @@
 
   function openEmailModal(mode) {
     emailMode = mode
-    const emailField = getEmailField()
-    if (!emailField) {
-      alert('No email field in form config')
-      return
-    }
+    const customField = $('customEmailField')
+    const customInput = $('customEmailInput')
 
-    let targets
-    if (mode === 'selected') {
-      if (selectedIds.size === 0) {
-        alert('Select at least one submission')
+    if (mode === 'custom') {
+      customField.classList.remove('hidden')
+      customInput.value = ''
+      $('emailRecipients').innerHTML = 'Paste your email list below, then compose your message.'
+    } else {
+      customField.classList.add('hidden')
+      const emailField = getEmailField()
+      if (!emailField) {
+        alert('No email field in form config')
         return
       }
-      targets = allSubmissions.filter(s => selectedIds.has(s.id))
-    } else {
-      targets = allSubmissions
-    }
 
-    const emails = targets.map(s => s.data[emailField.name]).filter(Boolean)
-    $('emailRecipients').innerHTML = `Sending to <strong>${emails.length}</strong> recipient${emails.length === 1 ? '' : 's'}: ${emails.slice(0, 5).map(esc).join(', ')}${emails.length > 5 ? '...' : ''}`
+      let targets
+      if (mode === 'selected') {
+        if (selectedIds.size === 0) {
+          alert('Select at least one submission')
+          return
+        }
+        targets = allSubmissions.filter(s => selectedIds.has(s.id))
+      } else {
+        targets = allSubmissions
+      }
+
+      const emails = targets.map(s => s.data[emailField.name]).filter(Boolean)
+      $('emailRecipients').innerHTML = `Sending to <strong>${emails.length}</strong> recipient${emails.length === 1 ? '' : 's'}: ${emails.slice(0, 5).map(esc).join(', ')}${emails.length > 5 ? '...' : ''}`
+    }
 
     $('emailSubject').value = ''
     $('emailBody').value = ''
@@ -374,6 +389,13 @@
     $('emailModal').classList.add('hidden')
   }
 
+  function parseCustomEmails(text) {
+    return text
+      .split(/[\n,;]+/)
+      .map(e => e.trim())
+      .filter(e => e.includes('@'))
+  }
+
   async function sendEmail() {
     const subject = $('emailSubject').value.trim()
     const body = $('emailBody').value.trim()
@@ -383,16 +405,28 @@
       return
     }
 
+    // Build payload based on mode
+    const payload = { subject }
+
+    if (emailMode === 'custom') {
+      const customEmails = parseCustomEmails($('customEmailInput').value)
+      if (customEmails.length === 0) {
+        showSendResult('No valid emails found in the list', true)
+        return
+      }
+      payload.emails = customEmails
+    } else {
+      payload.ids = emailMode === 'selected' ? [...selectedIds] : []
+    }
+
+    // Convert plain text newlines to <br> if no HTML tags detected
+    payload.html = body.includes('<') ? body : body.replace(/\n/g, '<br>')
+
     $('sendBtn').disabled = true
     $('sendBtn').textContent = 'Sending...'
 
-    const ids = emailMode === 'selected' ? [...selectedIds] : []
-
-    // Convert plain text newlines to <br> if no HTML tags detected
-    const html = body.includes('<') ? body : body.replace(/\n/g, '<br>')
-
     try {
-      const result = await apiPost('/api/admin/send-email', { ids, subject, html })
+      const result = await apiPost('/api/admin/send-email', payload)
 
       if (result.success) {
         showSendResult(`Sent: ${result.sent}, Failed: ${result.failed}`, false)
@@ -416,6 +450,14 @@
     el.className = 'send-result ' + (isError ? 'error' : 'success')
     el.classList.remove('hidden')
   }
+
+  // Live count for custom email input
+  $('customEmailInput').addEventListener('input', () => {
+    const count = parseCustomEmails($('customEmailInput').value).length
+    $('emailRecipients').innerHTML = count > 0
+      ? `<strong>${count}</strong> recipient${count === 1 ? '' : 's'} detected`
+      : 'Paste your email list below, then compose your message.'
+  })
 
   // Close modal on overlay click
   $('emailModal').addEventListener('click', (e) => {

@@ -292,30 +292,36 @@ const server = http.createServer(async (req, res) => {
     if (!checkAdmin(req, url)) return sendJson(res, { error: 'Unauthorized' }, 401)
 
     const body = await parseBody(req)
-    const { ids, subject, html } = body
+    const { ids, emails: customEmails, subject, html } = body
 
     if (!subject || !html) {
       return sendJson(res, { error: 'Missing subject or html' }, 400)
     }
 
-    // Resolve email addresses from submission IDs
-    const submissions = loadSubmissions()
-    const emailField = config.fields.find(f => f.type === 'email')
-    if (!emailField) {
-      return sendJson(res, { error: 'No email field defined in config' }, 400)
-    }
+    let emails = []
 
-    let targets = []
-    if (ids && ids.length > 0) {
-      targets = submissions.filter(s => ids.includes(s.id))
+    if (customEmails && customEmails.length > 0) {
+      // Custom mode: directly provided email list
+      emails = customEmails.filter(e => typeof e === 'string' && e.includes('@'))
     } else {
-      // No IDs = send to all
-      targets = submissions
+      // Submission mode: resolve from IDs or send to all
+      const submissions = loadSubmissions()
+      const emailField = config.fields.find(f => f.type === 'email')
+      if (!emailField) {
+        return sendJson(res, { error: 'No email field defined in config' }, 400)
+      }
+
+      const targets = (ids && ids.length > 0)
+        ? submissions.filter(s => ids.includes(s.id))
+        : submissions
+
+      emails = targets
+        .map(s => s.data[emailField.name])
+        .filter(e => e && e.includes('@'))
     }
 
-    const emails = targets
-      .map(s => s.data[emailField.name])
-      .filter(e => e && e.includes('@'))
+    // Deduplicate
+    emails = [...new Set(emails)]
 
     if (emails.length === 0) {
       return sendJson(res, { error: 'No valid email addresses found' }, 400)
