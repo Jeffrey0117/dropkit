@@ -2,6 +2,10 @@
 
 **Config-driven submission portal** — turn any idea into a working form in minutes.
 
+<p align="center">
+  <strong>English</strong> | <a href="./README.zh-TW.md">繁體中文</a>
+</p>
+
 Built for recruiting, homework collection, article submissions, event registration, and client requests. Just edit the config, deploy, and you're live.
 
 ## Features
