@@ -340,7 +340,7 @@ const server = http.createServer(async (req, res) => {
         const mailerRes = await fetch(`${config.mailerUrl}/api/send`, {
           method: 'POST',
           headers: mailerHeaders,
-          body: JSON.stringify({ to, subject, html }),
+          body: JSON.stringify({ to, subject, html, from: config.mailerFrom || 'DropKit <noreply@isnowfriend.com>' }),
         })
         if (mailerRes.ok) {
           results.sent++
