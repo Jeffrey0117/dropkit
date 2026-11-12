@@ -1,0 +1,162 @@
+{
+  "repo": 1,
+  "name": "dropkit",
+  "what": "Config-driven submission portal template",
+  "kind": "service",
+  "work": {
+    "guide": "CLAUDE.md",
+    "run": "npm start",
+    "deploy": "git push"
+  },
+  "offers": [
+    {
+      "id": "get_health",
+      "what": "Health check returning service status. Call to verify the DropKit service is up.",
+      "how": "http",
+      "http": {
+        "method": "GET",
+        "path": "/api/health"
+      }
+    },
+    {
+      "id": "get_config",
+      "what": "Returns the public form schema (title, description, fields, success message, max file size). Call before submitting to learn which fields and types are expected.",
+      "how": "http",
+      "http": {
+        "method": "GET",
+        "path": "/api/config"
+      }
+    },
+    {
+      "id": "submit_entry",
+      "what": "Submits a form entry. Fields are config-driven and validated against the schema from /api/config (required checks, email format, unknown-field rejection, 10k char cap, rate-limited to 10/hour per IP). Call to record a new submission.",
+      "how": "http",
+      "http": {
+        "method": "POST",
+        "path": "/api/submit",
+        "params": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Submitter name (required field in default config)"
+            },
+            "email": {
+              "type": "string",
+              "description": "Submitter email; must be a valid email address (required field in default config)"
+            },
+            "role": {
+              "type": "string",
+              "description": "Selected position; one of the config select options (e.g. Developer, Designer, PM)"
+            },
+            "intro": {
+              "type": "string",
+              "description": "Free-text about the submitter (optional)"
+            },
+            "resume": {
+              "type": "string",
+              "description": "Resume reference, e.g. an uploaded file URL from /api/upload (optional)"
+            }
+          },
+          "required": [
+            "name",
+            "email",
+            "role"
+          ]
+        }
+      }
+    },
+    {
+      "id": "upload_file",
+      "what": "Proxies a multipart/form-data file upload to the Pokkit storage service and returns the stored file URL and filename. Enforces the configured max file size. Call to upload a file (e.g. a resume) before referencing it in a submission.",
+      "how": "http",
+      "http": {
+        "method": "POST",
+        "path": "/api/upload",
+        "params": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "Binary file sent as multipart/form-data (Content-Type must be multipart/form-data)"
+            }
+          },
+          "required": [
+            "file"
+          ]
+        }
+      }
+    },
+    {
+      "id": "get_admin_stats",
+      "what": "Returns total submission count and today's submission count. Admin-only (x-admin-password header). Call to get a quick overview of collected submissions.",
+      "how": "http",
+      "http": {
+        "method": "GET",
+        "path": "/api/admin/stats",
+        "auth": "header"
+      }
+    },
+    {
+      "id": "list_admin_submissions",
+      "what": "Returns all submissions sorted newest-first along with the field schema. Admin-only. Call to review collected entries.",
+      "how": "http",
+      "http": {
+        "method": "GET",
+        "path": "/api/admin/submissions",
+        "auth": "header"
+      }
+    },
+    {
+      "id": "export_admin_csv",
+      "what": "Exports all submissions as an Excel-friendly UTF-8 CSV file (attachment). Admin-only. Call to download submissions as CSV.",
+      "how": "http",
+      "http": {
+        "method": "GET",
+        "path": "/api/admin/export",
+        "auth": "header"
+      }
+    },
+    {
+      "id": "send_admin_email",
+      "what": "Sends an email (via the Mailer service) to recipients resolved from submission IDs, all submissions, or a custom email list (deduplicated). Admin-only. Call to email submitters in bulk.",
+      "how": "http",
+      "http": {
+        "method": "POST",
+        "path": "/api/admin/send-email",
+        "auth": "header",
+        "params": {
+          "type": "object",
+          "properties": {
+            "subject": {
+              "type": "string",
+              "description": "Email subject line"
+            },
+            "html": {
+              "type": "string",
+              "description": "Email body as HTML"
+            },
+            "ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Submission IDs whose email-field addresses should be targeted; if omitted (and no custom emails) all submissions are targeted"
+            },
+            "emails": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Explicit list of recipient email addresses; overrides submission-based resolution when provided"
+            }
+          },
+          "required": [
+            "subject",
+            "html"
+          ]
+        }
+      }
+    }
+  ]
+}
