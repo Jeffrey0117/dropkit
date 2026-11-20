@@ -1,7 +1,10 @@
+require('./lib/env').loadEnv()
+
 module.exports = {
   title: 'Join Our Team',
   description: 'Fill out the form below to apply',
-  adminPassword: process.env.ADMIN_PASSWORD || 'dropkit2024',
+  // 不給預設值: 舊的 'dropkit2024' 寫在公開 repo 裡。沒設 = 後台整個關閉 (見 server.js)
+  adminPassword: process.env.ADMIN_PASSWORD || '',
   port: process.env.PORT || 4021,
   pokkitUrl: process.env.POKKIT_URL || 'http://localhost:4009',
   pokkitAuth: process.env.POKKIT_AUTH || '',

@@ -4,6 +4,7 @@
   "description": "Config-driven submission portal template",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test --test-timeout=15000 --test-force-exit tests/"
   }
 }

@@ -4,6 +4,9 @@ const path = require('path')
 const crypto = require('crypto')
 
 const config = require('./dropkit.config.js')
+const {
+  MULTIPART_OVERHEAD, BodyTooLargeError, readLimitedBody, allowedExtensions, filesAllowed, createLimiter,
+} = require('./lib/upload-guard')
 const PORT = config.port
 const SUBMISSIONS_FILE = path.join(__dirname, 'data', 'submissions.json')
 
@@ -53,25 +56,17 @@ const MIME_TYPES = {
   '.txt': 'text/plain',
 }
 
-function parseBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = ''
-    req.on('data', chunk => { body += chunk })
-    req.on('end', () => {
-      try { resolve(JSON.parse(body)) }
-      catch { resolve({}) }
-    })
-    req.on('error', reject)
-  })
-}
+const MAX_JSON_BODY = 1024 * 1024
 
-function parseRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = []
-    req.on('data', chunk => chunks.push(chunk))
-    req.on('end', () => resolve(Buffer.concat(chunks)))
-    req.on('error', reject)
-  })
+async function parseBody(req) {
+  let raw
+  try {
+    raw = await readLimitedBody(req, MAX_JSON_BODY)
+  } catch {
+    return {}
+  }
+  try { return JSON.parse(raw.toString('utf8')) }
+  catch { return {} }
 }
 
 function sendJson(res, data, status = 200) {
@@ -95,13 +90,32 @@ function serveStatic(res, filePath) {
   })
 }
 
-function checkAdmin(req, url) {
-  const auth = req.headers['x-admin-password'] || url.searchParams.get('pw') || ''
-  return auth === config.adminPassword
+// 後台密碼錯太多次就暫時鎖 (同一個訪客 15 分鐘 10 次)
+const adminFailLimiter = createLimiter({ max: 10, windowMs: 15 * 60 * 1000 })
+
+if (!config.adminPassword || config.adminPassword.length < 8) {
+  console.error('[dropkit] ADMIN_PASSWORD 沒設或少於 8 碼 → 後台 API 全部拒絕。設在 .env 後重啟。')
 }
 
+function checkAdmin(req, url) {
+  const expected = config.adminPassword
+  if (!expected || expected.length < 8) return false
+  if (adminFailLimiter.isBlocked(getClientIp(req))) return false
+  const given = String(req.headers['x-admin-password'] || url.searchParams.get('pw') || '')
+  const a = crypto.createHash('sha256').update(given).digest()
+  const b = crypto.createHash('sha256').update(expected).digest()
+  if (crypto.timingSafeEqual(a, b)) return true
+  adminFailLimiter(getClientIp(req))
+  return false
+}
+
+// CloudPipe 前面的 proxy 會清掉訪客自己填的 cf-connecting-ip / x-forwarded-for 再補真的,
+// 所以兩個都能信; cf-connecting-ip 優先 (經 Cloudflare tunnel 時才是訪客本人)
 function getClientIp(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown'
+  return req.headers['cf-connecting-ip']
+    || req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.socket.remoteAddress
+    || 'unknown'
 }
 
 // ── Validation ──────────────────────────────────────────
@@ -167,6 +181,16 @@ function buildCsv(submissions) {
   return rows.join('\r\n')
 }
 
+// ── Upload limits ───────────────────────────────────────
+
+const maxFileSize = config.maxFileSize || 10 * 1024 * 1024
+const bodyLimit = maxFileSize + MULTIPART_OVERHEAD
+const uploadExtensions = allowedExtensions(config.fields)
+const uploadLimiter = createLimiter({
+  max: Number(process.env.DROPKIT_UPLOAD_LIMIT_PER_HOUR) || 20,
+  windowMs: 60 * 60 * 1000,
+})
+
 // ── Server ──────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
@@ -196,11 +220,33 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, { error: 'Expected multipart/form-data' }, 400)
     }
 
-    const rawBody = await parseRawBody(req)
+    const tooLarge = () => {
+      res.setHeader('Connection', 'close')
+      // 回完 413 再斷線: 不把剩下的檔案讀進來, 但讓對方先拿到錯誤訊息
+      res.on('finish', () => req.destroy())
+      sendJson(res, { error: `File exceeds ${Math.round(maxFileSize / 1024 / 1024)}MB limit` }, 413)
+    }
 
-    // Check file size
-    if (config.maxFileSize && rawBody.length > config.maxFileSize) {
-      return sendJson(res, { error: `File exceeds ${Math.round(config.maxFileSize / 1024 / 1024)}MB limit` }, 413)
+    // 先看 Content-Length: 宣告就超過的, 一個 byte 都不收
+    const declared = Number(req.headers['content-length'] || 0)
+    if (declared > bodyLimit) return tooLarge()
+
+    if (!uploadLimiter(getClientIp(req))) {
+      res.setHeader('Connection', 'close')
+      res.on('finish', () => req.destroy())
+      return sendJson(res, { error: 'Too many uploads. Please try again later.' }, 429)
+    }
+
+    let rawBody
+    try {
+      rawBody = await readLimitedBody(req, bodyLimit)   // chunked 沒有 Content-Length: 邊收邊算
+    } catch (err) {
+      if (err instanceof BodyTooLargeError) return tooLarge()
+      return sendJson(res, { error: 'Upload interrupted' }, 400)
+    }
+
+    if (!filesAllowed(rawBody, uploadExtensions)) {
+      return sendJson(res, { error: `Only these file types are allowed: ${[...uploadExtensions].join(', ')}` }, 415)
     }
 
     // Forward to Pokkit
@@ -362,8 +408,12 @@ const server = http.createServer(async (req, res) => {
   serveStatic(res, pathname)
 })
 
-server.listen(PORT, () => {
-  console.log(`DropKit running on port ${PORT}`)
-  console.log(`  Form: http://localhost:${PORT}/`)
-  console.log(`  Admin: http://localhost:${PORT}/admin.html`)
-})
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`DropKit running on port ${PORT}`)
+    console.log(`  Form: http://localhost:${PORT}/`)
+    console.log(`  Admin: http://localhost:${PORT}/admin.html`)
+  })
+}
+
+module.exports = { server }
